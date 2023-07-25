@@ -52,26 +52,14 @@ function Install-Font {
 
             # Copy the font file to the Fonts directory
             Write-Host "Copying font: $(Split-Path -Leaf $file)"
-            Copy-Item -Path $file -Destination $fontDestinationPath
+            Copy-Item -Path $file -Destination $fontDestinationPath -Force
 
-            # Install the font using AddFontResource
-            $result = Add-FontResource -LiteralPath $fontDestinationPath
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($result) | Out-Null
+            # Add a registry entry for the font
+            $registryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+            $registryValueName = "$fontName (TrueType)"
+            New-ItemProperty -Path $registryPath -Name $registryValueName -Value $file.FullName -PropertyType String -Force | Out-Null
 
-            # Register the font in the system's font registry
-            $registryPath = "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
-            if (-not (Test-Path $registryPath)) {
-                Write-Host "Registry path not found: $registryPath"
-                continue
-            }
-
-            if (-not (Get-ItemProperty -Name $fontName -Path $registryPath -ErrorAction SilentlyContinue)) {
-                Write-Host "Registering font: $fontName"
-                New-ItemProperty -Name $fontName -Path $registryPath -PropertyType String -Value $fontName -Force | Out-Null
-                Write-Host "Font installed successfully: $(Split-Path -Leaf $file)"
-            } else {
-                Write-Host "Font already registered: $fontName"
-            }
+            Write-Host "Font installed successfully: $(Split-Path -Leaf $file)"
         } catch {
             Write-Host "Error installing font: $(Split-Path -Leaf $file). $_.Exception.Message"
         }
